@@ -1,0 +1,25 @@
+{
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "Maille Esquelle",
+            "username": "root",
+            "database": "apnolab",
+            "password": ""
+        },
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "AI-chan",
+            "database": "${workspaceFolder:ai-chan-discord-bot}/ai-chan.db"
+        }
+    ]
+}

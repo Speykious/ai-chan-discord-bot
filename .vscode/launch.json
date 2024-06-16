@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'ai-chan'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=ai-chan",
+                    "--package=ai-chan"
+                ],
+                "filter": {
+                    "name": "ai-chan",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

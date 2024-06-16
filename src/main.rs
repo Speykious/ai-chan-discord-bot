@@ -1,142 +1,89 @@
+use std::collections::VecDeque;
 use std::env;
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::sync::{mpsc, Arc, RwLock};
 
-use serenity::all::{ChannelId, CurrentUser, GatewayIntents, Ready};
-use serenity::builder::CreateMessage;
-use serenity::client::Cache;
+use reminders::{load_reminders, Reminder};
+use serenity::all::{
+	Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents,
+	Http, Interaction, Ready,
+};
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
 use serenity::Client;
 
-use tokio::time::sleep;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[derive(Debug, Clone, Copy)]
-pub enum Oops {
-	Ping,
-	Reply,
-}
+mod commands;
+mod reminders;
+mod soliloquy;
 
-pub struct EventHandler {
+#[derive(Clone)]
+pub struct AiChan {
 	bot: Arc<RwLock<Option<CurrentUser>>>,
-	soliloquy: Arc<RwLock<Option<ChannelId>>>,
-	cache: Cache,
+	reminders: Arc<RwLock<VecDeque<Reminder>>>,
+
+	// This is the worst type I've ever seen.
+	// Why am I using a NESTED Arc??
+	// This is insane.
+	http: Arc<RwLock<Option<Arc<Http>>>>,
 }
 
-impl EventHandler {
-	pub fn new() -> Self {
+impl AiChan {
+	pub fn new(reminders: VecDeque<Reminder>) -> Self {
 		Self {
 			bot: Arc::new(RwLock::new(None)),
-			soliloquy: Arc::new(RwLock::new(None)),
-			cache: Cache::new(),
+			reminders: Arc::new(RwLock::new(reminders)),
+			http: Arc::new(RwLock::new(None)),
 		}
 	}
 }
 
-impl Default for EventHandler {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
 #[serenity::async_trait]
-impl serenity::client::EventHandler for EventHandler {
+impl EventHandler for AiChan {
 	async fn ready(&self, ctx: Context, data: Ready) {
 		tracing::info!(
 			"Ready! Invite link: https://discord.com/api/oauth2/authorize?client_id={}&permissions=11264&scope=bot",
 			data.user.id
 		);
 		*self.bot.write().unwrap() = Some(data.user);
+		*self.http.write().unwrap() = Some(Arc::clone(&ctx.http));
 
-		for guild in data.guilds {
-			if let Some(guild_name) = guild.id.name(&self.cache) {
-				tracing::info!("Scanning guild {}...", guild_name);
-			}
+		match Command::set_global_commands(&ctx.http, vec![commands::remindme::register()]).await {
+			Ok(_) => tracing::info!("Created global slash commands {:?}", [commands::remindme::NAME]),
+			Err(e) => tracing::error!(
+				"Could not create global slash command {:?}: {e}",
+				commands::remindme::NAME
+			),
+		};
+	}
 
-			let channels = match guild.id.channels(&ctx.http).await {
-				Ok(channels) => channels,
-				Err(e) => {
-					tracing::error!("Unable to fetch channels for guild {}!", guild.id);
-					tracing::error!("{}", e);
-					continue;
+	async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+		if let Interaction::Command(command) = interaction {
+			println!(
+				"Received command interaction {:?} from {}",
+				&command.data.name, &command.user.name
+			);
+
+			match command.data.name.as_str() {
+				commands::remindme::NAME => {
+					commands::remindme::run(Arc::clone(&self.reminders), &ctx, &command).await;
+				}
+				name => {
+					let builder = CreateInteractionResponse::Message(
+						CreateInteractionResponseMessage::new()
+							.content(format!("Sorry, I don't have any `{name}` command :c")),
+					);
+					if let Err(e) = command.create_response(&ctx.http, builder).await {
+						tracing::error!("Cannot respond to slash command: {e}");
+					}
 				}
 			};
-
-			for channel in channels {
-				tracing::debug!("Discovered {} ({})", channel.0, channel.1.name);
-				if channel.1.name == "soliloquy" {
-					tracing::info!("#soliloquy channel registered.");
-					self.soliloquy.write().unwrap().replace(channel.0);
-				}
-			}
 		}
 	}
 
 	async fn message(&self, ctx: Context, message: Message) {
-		if !(self.soliloquy.read().unwrap()).is_some_and(|id| id == message.channel_id) {
-			// ignore non-soliloquy messages
-			return;
-		}
-
-		if message.author.id == self.bot.read().unwrap().as_ref().unwrap().id {
-			// ignore own messages
-			return;
-		}
-
-		if !message.mentions.is_empty() {
-			oops(Oops::Ping, ctx, message).await;
-			return;
-		}
-
-		if message.referenced_message.is_some()
-            // do not match meta-messages
-            && !(message.content.starts_with('[') && message.content.ends_with(']'))
-		{
-			oops(Oops::Reply, ctx, message).await;
-			return;
-		}
-	}
-}
-
-const PER_CHANNEL_RULES: &str =
-	"As per the channel rules, this channel is meant as a space where you can monologue, and interactions are thus forbidden.";
-
-async fn oops(oops_kind: Oops, ctx: Context, message: Message) {
-	if let Err(e) = message.delete(&ctx.http).await {
-		tracing::error!("Could not delete message: {}", e);
-	}
-
-	let oops_msg = match oops_kind {
-		Oops::Ping => "Please, do not mention people in #soliloquy!",
-		Oops::Reply => "Please, do not reply to other messages in #soliloquy!",
-	};
-
-	// zero-width space nyehehehe
-	let sanitized_message_content = message.content.replace('`', "\u{200B}`");
-
-	let youshallnotpass = format!(
-		"{} {}\n\n*Original message:*\n```\n{}\n```",
-		oops_msg, PER_CHANNEL_RULES, &sanitized_message_content
-	);
-
-	let content = CreateMessage::new().content(&youshallnotpass);
-
-	if message.author.dm(&ctx.http, content).await.is_ok() {
-		// try DM first
-		tracing::info!("Sent a DM to {}", message.author);
-	} else if let Ok(response) = message.reply_ping(&ctx.http, youshallnotpass).await {
-		// try in-channel
-		tracing::info!("Replied to {}", message.author);
-
-		sleep(Duration::from_secs(7)).await;
-		if let Err(e) = response.delete(&ctx.http).await {
-			tracing::error!("Could not delete response: {}", e);
-		}
-	} else {
-		// give up :(
-		tracing::warn!("Could not send a message to {}. I give up :(", message.author);
+		soliloquy::handle_message(self.bot.as_ref(), ctx, message).await;
 	}
 }
 
@@ -149,18 +96,30 @@ async fn main() {
 		.with(LevelFilter::INFO)
 		.init();
 
-	tracing::info!("NAMTAO #soliloquy channel cleaner init...");
+	tracing::info!("AI-chan is booting up...");
 	let token = env::var("TOKEN").expect("No token provided in env var TOKEN");
 
-	tracing::info!(
-		"Token hash: {}",
-		token.as_bytes().iter().map(|x| *x as u32).sum::<u32>()
-	);
-	let mut client = Client::builder(&token, GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT)
-		.event_handler(EventHandler::new())
-		.await
-		.expect("unable to init client");
+	tracing::info!("Loading reminders...");
+	let reminders = load_reminders().expect("Could not load reminders");
 
-	tracing::info!("Initialized.");
+	tracing::info!("Loading Discord bot client...");
+	let ai_chan = AiChan::new(reminders);
+
+	use GatewayIntents as G;
+	let mut client = Client::builder(&token, G::GUILD_MESSAGES | G::MESSAGE_CONTENT)
+		.event_handler(ai_chan.clone())
+		.await
+		.expect("Cannot initialize AI-chan! D:");
+
+	tracing::info!(">> Hi~ ♡");
+
+	let (stop_tx, stop_rx) = mpsc::channel();
+	let handle = tokio::spawn(async {
+		reminders::process_reminders_every_second(stop_rx, ai_chan).await;
+	});
+
 	client.start().await.unwrap();
+
+	stop_tx.send(()).unwrap();
+	handle.await.unwrap();
 }
