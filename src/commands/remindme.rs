@@ -1,5 +1,8 @@
 use std::{
-	collections::VecDeque, fmt::Write, ops::Deref, sync::{Arc, RwLock}
+	collections::VecDeque,
+	fmt::Write,
+	ops::Deref,
+	sync::{Arc, RwLock},
 };
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Utc};
@@ -20,7 +23,7 @@ pub fn register() -> CreateCommand {
 			CreateCommandOption::new(
 				CommandOptionType::String,
 				"time",
-				"Duration like 1d, 3h 10m, or specific date like 2027-06-10 12:23:00",
+				"Duration like 1d, 3h 10m, 5s, or specific date (UTC) like 2027-06-10 12:23:00",
 			)
 			.required(true),
 		)
@@ -52,7 +55,7 @@ pub async fn run(reminders: Arc<RwLock<VecDeque<Reminder>>>, ctx: &Context, comm
 		timestamp = Some(date_time.timestamp());
 
 		let date_time = date_time.format("%Y-%m-%d %H:%M:%S");
-		content = format!("Okie, will remind you on {date_time} ~");
+		content = format!("Okie, will remind you on {date_time} (UTC) ~");
 	} else if let Some((time_delta, date_time)) = parse_time_delta(&now, time) {
 		timestamp = Some(date_time.timestamp());
 
@@ -190,10 +193,10 @@ fn display_time_delta(time_delta: chrono::TimeDelta) -> String {
 	let mut time_delta_str = String::new();
 	for (i, (n, desc)) in duration_parts.into_iter().enumerate() {
 		if i != 0 {
-		if i == n_parts - 1 {
-			time_delta_str += " and ";
+			if i == n_parts - 1 {
+				time_delta_str += " and ";
 			} else {
-			time_delta_str += ", "
+				time_delta_str += ", "
 			}
 		}
 
