@@ -189,10 +189,12 @@ fn display_time_delta(time_delta: chrono::TimeDelta) -> String {
 
 	let mut time_delta_str = String::new();
 	for (i, (n, desc)) in duration_parts.into_iter().enumerate() {
+		if i != 0 {
 		if i == n_parts - 1 {
 			time_delta_str += " and ";
-		} else if i != 0 {
+			} else {
 			time_delta_str += ", "
+			}
 		}
 
 		write!(&mut time_delta_str, "{n} {desc}").unwrap();
