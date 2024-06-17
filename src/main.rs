@@ -1,11 +1,11 @@
 use std::collections::VecDeque;
 use std::env;
-use std::sync::{mpsc, Arc, RwLock};
+use std::sync::{Arc, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
 	Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents,
-	Http, Interaction, Ready,
+	Interaction, Ready,
 };
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
@@ -22,11 +22,6 @@ mod soliloquy;
 pub struct AiChan {
 	bot: Arc<RwLock<Option<CurrentUser>>>,
 	reminders: Arc<RwLock<VecDeque<Reminder>>>,
-
-	// This is the worst type I've ever seen.
-	// Why am I using a NESTED Arc??
-	// This is insane.
-	http: Arc<RwLock<Option<Arc<Http>>>>,
 }
 
 impl AiChan {
@@ -34,7 +29,6 @@ impl AiChan {
 		Self {
 			bot: Arc::new(RwLock::new(None)),
 			reminders: Arc::new(RwLock::new(reminders)),
-			http: Arc::new(RwLock::new(None)),
 		}
 	}
 }
@@ -47,7 +41,6 @@ impl EventHandler for AiChan {
 			data.user.id
 		);
 		*self.bot.write().unwrap() = Some(data.user);
-		*self.http.write().unwrap() = Some(Arc::clone(&ctx.http));
 
 		match Command::set_global_commands(&ctx.http, vec![commands::remindme::register()]).await {
 			Ok(_) => tracing::info!("Created global slash commands {:?}", [commands::remindme::NAME]),
@@ -56,6 +49,11 @@ impl EventHandler for AiChan {
 				commands::remindme::NAME
 			),
 		};
+
+		let reminders = Arc::clone(&self.reminders);
+		tokio::spawn(async move {
+			reminders::process_reminders_every_second(reminders, ctx).await;
+		});
 	}
 
 	async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -113,13 +111,5 @@ async fn main() {
 
 	tracing::info!(">> Hi~ ♡");
 
-	let (stop_tx, stop_rx) = mpsc::channel();
-	let handle = tokio::spawn(async {
-		reminders::process_reminders_every_second(stop_rx, ai_chan).await;
-	});
-
 	client.start().await.unwrap();
-
-	stop_tx.send(()).unwrap();
-	handle.await.unwrap();
 }

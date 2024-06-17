@@ -1,16 +1,9 @@
 use std::{
-	collections::VecDeque,
-	fs::File,
-	io::{self, BufReader, BufWriter, Read, Write},
-	sync::{mpsc, Arc},
-	thread,
-	time::SystemTime,
+	collections::VecDeque, fs::File, io::{self, BufReader, BufWriter, Read, Write}, ops::Deref, sync::{Arc, RwLock}, time::SystemTime
 };
 
 use chrono::{DateTime, TimeDelta, Timelike, Utc};
-use serenity::all::{ChannelId, CreateMessage, UserId};
-
-use crate::AiChan;
+use serenity::all::{ChannelId, Context, CreateMessage, UserId};
 
 pub fn date_time_now() -> chrono::DateTime<Utc> {
 	chrono::DateTime::<Utc>::from_timestamp_micros(
@@ -101,52 +94,46 @@ pub fn store_reminders(reminders: &VecDeque<Reminder>) -> io::Result<()> {
 	Ok(())
 }
 
-pub async fn process_reminders_every_second(stop_channel: mpsc::Receiver<()>, ai_chan: AiChan) {
+pub async fn process_reminders_every_second(reminders: Arc<RwLock<VecDeque<Reminder>>>, ctx: Context) {
 	loop {
-		if stop_channel.try_recv().is_ok() {
-			break;
-		}
-
 		let now = date_time_now().with_nanosecond(0).unwrap();
 
-		if ai_chan.http.read().unwrap().is_some() {
-			loop {
-				let first_timestamp = ai_chan.reminders.read().unwrap().front().map(|r| r.timestamp);
-				if let Some(first_timestamp) = first_timestamp {
-					let date_time = DateTime::<Utc>::from_timestamp(first_timestamp, 0).unwrap();
-                    tracing::info!("there is a reminder with date {}", date_time);
+		loop {
+			let first_timestamp = reminders.read().unwrap().front().map(|r| r.timestamp);
+			if let Some(first_timestamp) = first_timestamp {
+				let date_time = DateTime::<Utc>::from_timestamp(first_timestamp, 0).unwrap();
 
-					if date_time <= now {
-						let reminder = ai_chan.reminders.write().unwrap().pop_front().unwrap();
+				if date_time <= now {
+					let reminder = reminders.write().unwrap().pop_front().unwrap();
 
-						let content = format!(
-							"<@{}> Here's your reminder~\n\n{}",
-							reminder.user_id.get(),
-							reminder.message
-						);
+					let content = format!(
+						"<@{}> Here's your reminder~\n\n{}",
+						reminder.user_id.get(),
+						reminder.message
+					);
 
-						let http = Arc::clone(ai_chan.http.read().unwrap().as_ref().unwrap());
-						let result = (reminder.channel_id)
-							.send_message(&http, CreateMessage::new().content(content))
-							.await;
+					let result = (reminder.channel_id)
+						.send_message(&ctx.http, CreateMessage::new().content(content))
+						.await;
 
-						if let Err(e) = result {
-							tracing::error!("Cannot send reminder message: {e}");
-						}
-					} else {
-                        break;
-                    }
+					if let Err(e) = result {
+						tracing::error!("Cannot send reminder message: {e}");
+					}
+
+					store_reminders(reminders.read().unwrap().deref()).unwrap();
 				} else {
 					break;
 				}
+			} else {
+				break;
 			}
 		}
 
-		sleep_until_next_second();
+		sleep_until_next_second().await;
 	}
 }
 
-fn sleep_until_next_second() {
+async fn sleep_until_next_second() {
 	let now = date_time_now();
 
 	let prev_time = now.time().with_nanosecond(0).unwrap();
@@ -154,5 +141,5 @@ fn sleep_until_next_second() {
 	let next_time = now.with_time(next_time).unwrap().to_utc();
 
 	let remaining = next_time.signed_duration_since(now).to_std().unwrap_or_default();
-	thread::sleep(remaining);
+	tokio::time::sleep(remaining).await;
 }
