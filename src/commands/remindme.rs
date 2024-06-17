@@ -1,6 +1,5 @@
 use std::{
 	collections::VecDeque,
-	fmt::Write,
 	ops::Deref,
 	sync::{Arc, RwLock},
 };
@@ -52,15 +51,15 @@ pub async fn run(reminders: Arc<RwLock<VecDeque<Reminder>>>, ctx: &Context, comm
 	let timestamp;
 	let mut content;
 	if let Some(date_time) = parse_date_time(&now, time) {
-		timestamp = Some(date_time.timestamp());
+		let ts = date_time.timestamp();
+		timestamp = Some(ts);
 
-		let date_time = date_time.format("%Y-%m-%d %H:%M:%S");
-		content = format!("Okie, will remind you on {date_time} (UTC) ~");
-	} else if let Some((time_delta, date_time)) = parse_time_delta(&now, time) {
-		timestamp = Some(date_time.timestamp());
+		content = format!("Okie, will remind you on <t:{ts}:F> ~");
+	} else if let Some(date_time) = parse_time_delta(&now, time) {
+		let ts = date_time.timestamp();
+		timestamp = Some(ts);
 
-		let time_delta_str = display_time_delta(time_delta);
-		content = format!("Okie, will remind you in {time_delta_str} ~");
+		content = format!("Okie, will remind you <t:{ts}:R> ~");
 	} else {
 		timestamp = None;
 		content = "Sorry, I couldn't understand the time you sent :c".to_string();
@@ -139,7 +138,7 @@ fn parse_date_time(now: &DateTime<Utc>, input: &str) -> Option<DateTime<Utc>> {
 	Some(NaiveDateTime::new(naive_date, naive_time).and_utc())
 }
 
-fn parse_time_delta(now: &DateTime<Utc>, input: &str) -> Option<(chrono::TimeDelta, DateTime<Utc>)> {
+fn parse_time_delta(now: &DateTime<Utc>, input: &str) -> Option<DateTime<Utc>> {
 	let mut time_delta = chrono::TimeDelta::zero();
 
 	for input_part in input.trim().split(' ') {
@@ -161,50 +160,5 @@ fn parse_time_delta(now: &DateTime<Utc>, input: &str) -> Option<(chrono::TimeDel
 		}
 	}
 
-	Some((time_delta, now.checked_add_signed(time_delta)?))
-}
-
-fn display_time_delta(time_delta: chrono::TimeDelta) -> String {
-	let d = time_delta.num_days();
-	let h = time_delta.num_hours() % 24;
-	let m = time_delta.num_minutes() % 60;
-	let s = time_delta.num_seconds() % 60;
-
-	let mut duration_parts = Vec::new();
-	if d != 0 {
-		duration_parts.push((d, "day"));
-	}
-	if h != 0 {
-		duration_parts.push((h, "hour"));
-	}
-	if m != 0 {
-		duration_parts.push((m, "minute"));
-	}
-	if s != 0 {
-		duration_parts.push((s, "second"));
-	}
-
-	if duration_parts.is_empty() {
-		return "right now".to_string();
-	}
-
-	let n_parts = duration_parts.len();
-
-	let mut time_delta_str = String::new();
-	for (i, (n, desc)) in duration_parts.into_iter().enumerate() {
-		if i != 0 {
-			if i == n_parts - 1 {
-				time_delta_str += " and ";
-			} else {
-				time_delta_str += ", "
-			}
-		}
-
-		write!(&mut time_delta_str, "{n} {desc}").unwrap();
-		if n != 1 {
-			time_delta_str += "s";
-		}
-	}
-
-	time_delta_str
+	now.checked_add_signed(time_delta)
 }
