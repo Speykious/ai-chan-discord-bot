@@ -2,7 +2,7 @@ use std::{
 	collections::VecDeque,
 	num::ParseIntError,
 	ops::Deref,
-	sync::{Arc, RwLock},
+	sync::{atomic::Ordering, Arc, RwLock},
 };
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Utc};
@@ -11,7 +11,7 @@ use serenity::all::{
 	CreateInteractionResponseMessage,
 };
 
-use crate::reminders::{date_time_now, store_reminders, Reminder};
+use crate::reminders::{date_time_now, store_reminders, Reminder, NEXT_REMINDER_ID};
 
 pub const NAME: &str = "remindme";
 pub const DESCRIPTION: &str = "I'll remind you whatever you want later~ ♡";
@@ -139,9 +139,13 @@ pub async fn run(reminders: Arc<RwLock<VecDeque<Reminder>>>, ctx: &Context, comm
 				Err(idx) => idx,
 			};
 
+			let id = NEXT_REMINDER_ID.load(Ordering::Relaxed);
+			NEXT_REMINDER_ID.store(id + 1, Ordering::Relaxed);
+
 			reminders.insert(
 				idx,
 				Reminder {
+					id,
 					timestamp,
 					user_id,
 					channel_id,

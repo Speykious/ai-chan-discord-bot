@@ -42,12 +42,14 @@ impl EventHandler for AiChan {
 		);
 		*self.bot.write().unwrap() = Some(data.user);
 
-		match Command::set_global_commands(&ctx.http, vec![commands::remindme::register()]).await {
-			Ok(_) => tracing::info!("Created global slash commands {:?}", [commands::remindme::NAME]),
-			Err(e) => tracing::error!(
-				"Could not create global slash command {:?}: {e}",
-				commands::remindme::NAME
-			),
+		match Command::set_global_commands(
+			&ctx.http,
+			vec![commands::remindme::register(), commands::myreminders::register()],
+		)
+		.await
+		{
+			Ok(_) => tracing::info!("Created global slash commands"),
+			Err(e) => tracing::error!("Could not create global slash commands: {e}",),
 		};
 
 		let reminders = Arc::clone(&self.reminders);
@@ -58,14 +60,18 @@ impl EventHandler for AiChan {
 
 	async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
 		if let Interaction::Command(command) = interaction {
-			println!(
+			tracing::info!(
 				"Received command interaction {:?} from {}",
-				&command.data.name, &command.user.name
+				&command.data.name,
+				&command.user.name
 			);
 
 			match command.data.name.as_str() {
 				commands::remindme::NAME => {
 					commands::remindme::run(Arc::clone(&self.reminders), &ctx, &command).await;
+				}
+				commands::myreminders::NAME => {
+					commands::myreminders::run(Arc::clone(&self.reminders), &ctx, &command).await;
 				}
 				name => {
 					let builder = CreateInteractionResponse::Message(

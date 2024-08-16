@@ -1,5 +1,10 @@
 use std::{
-	collections::VecDeque, fs::File, io::{self, BufReader, BufWriter, Read, Write}, ops::Deref, sync::{Arc, RwLock}, time::SystemTime
+	collections::VecDeque,
+	fs::File,
+	io::{self, BufReader, BufWriter, Read, Write},
+	ops::Deref,
+	sync::{atomic::{AtomicU64, Ordering}, Arc, RwLock},
+	time::SystemTime,
 };
 
 use chrono::{DateTime, TimeDelta, Timelike, Utc};
@@ -15,7 +20,10 @@ pub fn date_time_now() -> chrono::DateTime<Utc> {
 	.unwrap()
 }
 
+pub static NEXT_REMINDER_ID: AtomicU64 = AtomicU64::new(0);
+
 pub struct Reminder {
+	pub id: u64,
 	pub timestamp: i64,
 	pub user_id: UserId,
 	pub channel_id: ChannelId,
@@ -24,6 +32,7 @@ pub struct Reminder {
 
 impl Reminder {
 	fn write(&self, w: &mut impl Write) -> io::Result<()> {
+		w.write_all(&self.id.to_le_bytes())?;
 		w.write_all(&self.timestamp.to_le_bytes())?;
 		w.write_all(&self.user_id.get().to_le_bytes())?;
 		w.write_all(&self.channel_id.get().to_le_bytes())?;
@@ -32,6 +41,10 @@ impl Reminder {
 	}
 
 	fn read(r: &mut impl Read) -> io::Result<Self> {
+		let mut id_bytes = [0_u8; 8];
+		r.read_exact(&mut id_bytes)?;
+		let id = u64::from_le_bytes(id_bytes);
+
 		let mut timestamp_bytes = [0_u8; 8];
 		r.read_exact(&mut timestamp_bytes)?;
 		let timestamp = i64::from_le_bytes(timestamp_bytes);
@@ -53,6 +66,7 @@ impl Reminder {
 		let message = String::from_utf8(message_bytes).unwrap();
 
 		Ok(Self {
+			id,
 			timestamp,
 			user_id,
 			channel_id,
@@ -74,11 +88,14 @@ pub fn load_reminders() -> io::Result<VecDeque<Reminder>> {
 
 	let mut reminders_len_bytes = [0_u8; 8];
 	r.read_exact(&mut reminders_len_bytes)?;
-	let reminders_len = u64::from_le_bytes(reminders_len_bytes) as usize;
+	let reminders_len = u64::from_le_bytes(reminders_len_bytes);
 
 	for _ in 0..reminders_len {
 		reminders.push_back(Reminder::read(&mut r)?);
 	}
+
+	let next_reminder_id = reminders.iter().map(|rem| rem.id).max().unwrap_or_default() + 1;
+	NEXT_REMINDER_ID.store(next_reminder_id, Ordering::Relaxed);
 
 	Ok(reminders)
 }
