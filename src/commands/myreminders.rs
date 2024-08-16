@@ -5,7 +5,8 @@ use std::{
 };
 
 use serenity::all::{
-	CommandInteraction, Context, CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage,
+	CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption, CreateInteractionResponse,
+	CreateInteractionResponseMessage,
 };
 
 use crate::reminders::Reminder;
@@ -14,11 +15,39 @@ pub const NAME: &str = "myreminders";
 pub const DESCRIPTION: &str = "I'll list all your reminders~ ♡";
 
 pub fn register() -> CreateCommand {
-	CreateCommand::new(NAME).description(DESCRIPTION)
+	CreateCommand::new(NAME)
+		.add_option(CreateCommandOption::new(
+			CommandOptionType::Integer,
+			"id",
+			"ID of the reminder you want to see (all if not specified)",
+		))
+		.description(DESCRIPTION)
 }
 
 pub async fn run(reminders: Arc<RwLock<VecDeque<Reminder>>>, ctx: &Context, command: &CommandInteraction) {
-	let content = {
+	let mut rem_id = None;
+
+	for option in &command.data.options {
+		match option.name.as_str() {
+			"id" => rem_id = Some(option.value.as_i64().unwrap()),
+			s => tracing::error!("Invalid option {s:?}"),
+		}
+	}
+
+	let content = if let Some(rem_id) = rem_id {
+		let reminders = reminders.read().unwrap();
+
+		let rem = (reminders.iter()).find(|rem| rem.user_id == command.user.id && rem.id == rem_id);
+
+		if let Some(rem) = rem {
+			format!(
+				"Here's your reminder~\n`{}` <t:{}:F> in <#{}>\n\n{}",
+				rem.id, rem.timestamp, rem.channel_id, rem.message
+			)
+		} else {
+			String::from("No such reminder :(")
+		}
+	} else {
 		let reminders = reminders.read().unwrap();
 
 		let mut content = if reminders.len() <= 100 {

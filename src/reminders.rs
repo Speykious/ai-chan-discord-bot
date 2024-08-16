@@ -3,7 +3,10 @@ use std::{
 	fs::File,
 	io::{self, BufReader, BufWriter, Read, Write},
 	ops::Deref,
-	sync::{atomic::{AtomicU64, Ordering}, Arc, RwLock},
+	sync::{
+		atomic::{AtomicI64, Ordering},
+		Arc, RwLock,
+	},
 	time::SystemTime,
 };
 
@@ -20,10 +23,10 @@ pub fn date_time_now() -> chrono::DateTime<Utc> {
 	.unwrap()
 }
 
-pub static NEXT_REMINDER_ID: AtomicU64 = AtomicU64::new(0);
+pub static NEXT_REMINDER_ID: AtomicI64 = AtomicI64::new(0);
 
 pub struct Reminder {
-	pub id: u64,
+	pub id: i64,
 	pub timestamp: i64,
 	pub user_id: UserId,
 	pub channel_id: ChannelId,
@@ -43,7 +46,7 @@ impl Reminder {
 	fn read(r: &mut impl Read) -> io::Result<Self> {
 		let mut id_bytes = [0_u8; 8];
 		r.read_exact(&mut id_bytes)?;
-		let id = u64::from_le_bytes(id_bytes);
+		let id = i64::from_le_bytes(id_bytes);
 
 		let mut timestamp_bytes = [0_u8; 8];
 		r.read_exact(&mut timestamp_bytes)?;
