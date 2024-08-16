@@ -25,6 +25,7 @@ pub fn date_time_now() -> chrono::DateTime<Utc> {
 
 pub static NEXT_REMINDER_ID: AtomicI64 = AtomicI64::new(0);
 
+#[derive(Clone)]
 pub struct Reminder {
 	pub id: i64,
 	pub timestamp: i64,
