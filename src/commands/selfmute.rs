@@ -55,7 +55,7 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 		let mute_until = EditMember::new().disable_communication_until_datetime(until.into());
 
 		match member.edit(ctx, mute_until).await {
-			Ok(()) => format!("Have a nice rest~ <t:{}:R>", until.timestamp()),
+			Ok(()) => format!("Muted until <t:{0}:f> (<t:{0}:R>). Have a nice rest~", until.timestamp()),
 			Err(e) => {
 				tracing::error!("Cannot mute member: {e}");
 				"Unfortunately couldn't mute you :(".to_string()
