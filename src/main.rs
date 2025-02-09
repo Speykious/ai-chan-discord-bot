@@ -44,7 +44,11 @@ impl EventHandler for AiChan {
 
 		match Command::set_global_commands(
 			&ctx.http,
-			vec![commands::remindme::register(), commands::myreminders::register()],
+			vec![
+				commands::remindme::register(),
+				commands::myreminders::register(),
+				commands::selfmute::register(),
+			],
 		)
 		.await
 		{
@@ -72,6 +76,9 @@ impl EventHandler for AiChan {
 				}
 				commands::myreminders::NAME => {
 					commands::myreminders::run(Arc::clone(&self.reminders), &ctx, &command).await;
+				}
+				commands::selfmute::NAME => {
+					commands::selfmute::run(&ctx, command).await;
 				}
 				name => {
 					let builder = CreateInteractionResponse::Message(
