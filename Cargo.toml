@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.38"
 dotenvy = "0.15"
-serenity = "0.12"
+serenity = "0.12.4"
 timer = "0.2.0"
 tokio = { version = "1.38", features = [ "rt-multi-thread" ] }
 tracing = "0.1"

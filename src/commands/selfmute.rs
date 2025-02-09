@@ -3,21 +3,24 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use serenity::all::{
 	CommandDataOption, CommandDataOptionValue, CommandInteraction, CommandOptionType, Context, CreateCommand,
-	CreateCommandOption, CreateInteractionResponse, CreateInteractionResponseMessage, EditMember,
+	CreateCommandOption, CreateInteractionResponse, CreateInteractionResponseMessage, EditMember, InteractionContext,
 };
 
 pub const NAME: &str = "selfmute";
 pub const DESCRIPTION: &str = "Mute yourself for a specified amount of minutes :x";
 
 pub fn register() -> CreateCommand {
-	CreateCommand::new(NAME).description(DESCRIPTION).add_option(
-		CreateCommandOption::new(
-			CommandOptionType::Number,
-			"minutes",
-			"Duration of time you want to be muted for",
+	CreateCommand::new(NAME)
+		.description(DESCRIPTION)
+		.contexts(vec![InteractionContext::Guild])
+		.add_option(
+			CreateCommandOption::new(
+				CommandOptionType::Number,
+				"minutes",
+				"Duration of time you want to be muted for",
+			)
+			.required(true),
 		)
-		.required(true),
-	)
 }
 
 pub async fn run(ctx: &Context, mut command: CommandInteraction) {
@@ -33,32 +36,31 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 		}
 	};
 
-    let content: String = 'content: {
-        if minutes.is_sign_negative() {
-            break 'content "You can't mute yourself a negative amount of time?!".into();
-        }
+	let content: String = 'content: {
+		if minutes.is_sign_negative() {
+			break 'content "You can't mute yourself a negative amount of time?!".into();
+		}
 
-        if minutes == 0.0 {
-            break 'content "Muting yourself for zero seconds is a little bit silly".into();
-        }
-    
+		if minutes == 0.0 {
+			break 'content "Muting yourself for zero seconds is a little bit silly".into();
+		}
 
-        let Some(member) = &mut command.member else {
-            break 'content "Command is only usable in a guild!".into();
-        };
-    
-        let until: DateTime<Utc> = Utc::now() + Duration::from_secs_f64(minutes * 60.);
-    
-        let mute_until = EditMember::new().disable_communication_until_datetime(until.into());
-    
-        match member.edit(ctx, mute_until).await {
-            Ok(()) => format!("Have a nice rest! <t:{}:R>", until.timestamp()),
-            Err(e) => {
-                tracing::error!("Cannot mute member: {e}");
-                "Unfortunately couldn't mute you :(".into()
-            }
-        }    
-    };
+		let Some(member) = &mut command.member else {
+			break 'content "Command is only usable in a guild!".into();
+		};
+
+		let until: DateTime<Utc> = Utc::now() + Duration::from_secs_f64(minutes * 60.);
+
+		let mute_until = EditMember::new().disable_communication_until_datetime(until.into());
+
+		match member.edit(ctx, mute_until).await {
+			Ok(()) => format!("Have a nice rest! <t:{}:R>", until.timestamp()),
+			Err(e) => {
+				tracing::error!("Cannot mute member: {e}");
+				"Unfortunately couldn't mute you :(".into()
+			}
+		}
+	};
 
 	let response_message = CreateInteractionResponseMessage::new().ephemeral(true).content(content);
 	let builder = CreateInteractionResponse::Message(response_message);
