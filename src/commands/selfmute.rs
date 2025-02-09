@@ -17,9 +17,8 @@ pub fn register() -> CreateCommand {
 			CreateCommandOption::new(
 				CommandOptionType::Number,
 				"minutes",
-				"Duration of time you want to be muted for",
-			)
-			.required(true),
+				"Duration of time you want to be muted for (5 minutes if unspecified)",
+			),
 		)
 }
 
@@ -31,8 +30,10 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 			..
 		}] if name == "minutes" => *m,
 
+		[] => 5.0,
+
 		options => {
-			tracing::error!("Unexpected options {options:?}");
+			tracing::error!("Unexpected options: {options:?}");
 			return;
 		}
 	};
