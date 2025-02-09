@@ -30,6 +30,7 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 			value: CommandDataOptionValue::Number(m),
 			..
 		}] if name == "minutes" => *m,
+
 		options => {
 			tracing::error!("Unexpected options {options:?}");
 			return;
@@ -42,7 +43,7 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 		}
 
 		if minutes == 0.0 {
-			break 'content "Muting yourself for zero seconds is a little bit silly".into();
+			break 'content "Muting yourself for zero seconds is a little bit silly :3c".into();
 		}
 
 		let Some(member) = &mut command.member else {
@@ -54,10 +55,10 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 		let mute_until = EditMember::new().disable_communication_until_datetime(until.into());
 
 		match member.edit(ctx, mute_until).await {
-			Ok(()) => format!("Have a nice rest! <t:{}:R>", until.timestamp()),
+			Ok(()) => format!("Have a nice rest~ <t:{}:R>", until.timestamp()),
 			Err(e) => {
 				tracing::error!("Cannot mute member: {e}");
-				"Unfortunately couldn't mute you :(".into()
+				"Unfortunately couldn't mute you :(".to_string()
 			}
 		}
 	};
