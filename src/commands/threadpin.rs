@@ -73,11 +73,11 @@ pub async fn run(ctx: &Context, command: CommandInteraction) {
 			.await;
 		match res {
 			Ok(()) => {
-				send_ephemeral_response(&command, &ctx.http, "Message unpinned", false).await;
+				send_ephemeral_response(&command, &ctx.http, "Unpinned the message for you~", false).await;
 			}
 			Err(e) => {
 				tracing::error!("Could not unpin message {}/{}: {e}", channel.id.get(), message.id.get());
-				send_ephemeral_response(&command, &ctx.http, "Could not unpin the message", false).await;
+				send_ephemeral_response(&command, &ctx.http, "Could not unpin the message... :c", false).await;
 			}
 		}
 	} else {
@@ -91,11 +91,11 @@ pub async fn run(ctx: &Context, command: CommandInteraction) {
 			.await;
 		match res {
 			Ok(()) => {
-				send_ephemeral_response(&command, &ctx.http, "Message pinned", false).await;
+				send_ephemeral_response(&command, &ctx.http, "Pinned the message for you~", false).await;
 			}
 			Err(e) => {
 				tracing::error!("Could not pin message {}/{}: {e}", channel.id.get(), message.id.get());
-				send_ephemeral_response(&command, &ctx.http, "Could not pin the message", false).await;
+				send_ephemeral_response(&command, &ctx.http, "Could not pin the message... :c", false).await;
 			}
 		}
 	}
