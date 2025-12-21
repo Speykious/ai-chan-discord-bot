@@ -1,11 +1,10 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::env;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
-	Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents,
-	Interaction, Ready,
+	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents, Interaction, Ready
 };
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
@@ -22,6 +21,7 @@ mod soliloquy;
 pub struct AiChan {
 	bot: Arc<RwLock<Option<CurrentUser>>>,
 	reminders: Arc<RwLock<VecDeque<Reminder>>>,
+	channel_landmines: Arc<Mutex<HashMap<ChannelId, VecDeque<u16>>>>,
 }
 
 impl AiChan {
@@ -29,6 +29,7 @@ impl AiChan {
 		Self {
 			bot: Arc::new(RwLock::new(None)),
 			reminders: Arc::new(RwLock::new(reminders)),
+			channel_landmines: Arc::new(Mutex::new(HashMap::new())),
 		}
 	}
 }
@@ -48,6 +49,7 @@ impl EventHandler for AiChan {
 				commands::remindme::register(),
 				commands::myreminders::register(),
 				commands::selfmute::register(),
+				commands::landmine::register(),
 			],
 		)
 		.await
@@ -79,6 +81,9 @@ impl EventHandler for AiChan {
 				}
 				commands::selfmute::NAME => {
 					commands::selfmute::run(&ctx, command).await;
+				},
+				commands::landmine::NAME => {
+					commands::landmine::run(Arc::clone(&self.channel_landmines), &ctx, &command).await;
 				}
 				name => {
 					let builder = CreateInteractionResponse::Message(
@@ -94,7 +99,8 @@ impl EventHandler for AiChan {
 	}
 
 	async fn message(&self, ctx: Context, message: Message) {
-		soliloquy::handle_message(self.bot.as_ref(), ctx, message).await;
+		commands::landmine::handle_message(Arc::clone(&self.channel_landmines), &ctx, &message).await;
+		soliloquy::handle_message(self.bot.as_ref(), &ctx, &message).await;
 	}
 }
 
