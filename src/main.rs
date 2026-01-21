@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::env;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
@@ -10,6 +10,7 @@ use serenity::model::prelude::Message;
 use serenity::prelude::Context;
 use serenity::Client;
 
+use tokio::sync::Mutex;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -99,8 +100,8 @@ impl EventHandler for AiChan {
 	}
 
 	async fn message(&self, ctx: Context, message: Message) {
-		commands::landmine::handle_message(Arc::clone(&self.channel_landmines), &ctx, &message).await;
 		soliloquy::handle_message(self.bot.as_ref(), &ctx, &message).await;
+		commands::landmine::handle_message(Arc::clone(&self.channel_landmines), &ctx, &message).await;
 	}
 }
 
