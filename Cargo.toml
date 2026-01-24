@@ -1,8 +1,8 @@
 [package]
 name = "ai-chan"
-authors = ["Speykious <speykious@gmail.com>"]
+authors = ["Speykious <speykious@speykious.dev>"]
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = "0.4"
