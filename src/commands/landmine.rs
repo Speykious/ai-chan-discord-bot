@@ -139,7 +139,7 @@ pub async fn handle_message(
 			let builder = EditMember::new().disable_communication_until_datetime(time.into());
 			match guild.edit_member(ctx.http(), message.author.id, builder).await {
 				Ok(_) => {
-					let content = format!(":boom: <@{}> stepped on a landmine and has been timed out for **10 minutes!**\n{} Landmines remain~", message.author.id, landmines.len());
+					let content = format!(":boom: <@{}> stepped on a landmine and has been timed out for **{} minutes!**\n-# {} Landmines remain~", message.author.id, first_landmine.minutes, landmines.len());
 					if let Err(why) = message.channel_id.say(&ctx.http, content).await {
 						tracing::error!("Error sending message: {why:?}");
 					}
