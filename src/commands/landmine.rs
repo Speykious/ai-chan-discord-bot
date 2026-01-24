@@ -64,6 +64,17 @@ pub async fn run(
 	ctx: &Context,
 	command: &CommandInteraction,
 ) {
+	if let Some(landmines) = (landmine_list.lock().await).get(&command.channel_id) {
+		let content = format!("There are already {} landmines in this channel!", landmines.len());
+
+		let builder = CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().content(content));
+		if let Err(e) = command.create_response(&ctx.http, builder).await {
+			tracing::error!("Cannot respond to slash command: {e}");
+		}
+
+		return;
+	}
+
 	let mut landmines = 5;
 	let mut messages = 10;
 	let mut minutes = 2;
@@ -93,7 +104,10 @@ pub async fn run(
 	);
 
 	(landmine_list.lock().await).insert(command.channel_id, local_landmines);
-	let content = format!("There are now {} landmines in this channel. Users beware... :3c ♡\n-# max delay = **{}** messages, max timeout = **{}** minutes", landmines, messages, minutes);
+	let content = format!(
+		"There are now {} landmines in this channel. Users beware... :3c ♡\n-# max delay = **{}** messages, max timeout = **{}** minutes",
+		landmines, messages, minutes
+	);
 
 	let builder = CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().content(content));
 	if let Err(e) = command.create_response(&ctx.http, builder).await {
@@ -143,7 +157,12 @@ pub async fn handle_message(
 			let builder = EditMember::new().disable_communication_until_datetime(time.into());
 			match guild.edit_member(ctx.http(), message.author.id, builder).await {
 				Ok(_) => {
-					let content = format!(":boom: <@{}> stepped on a landmine and has been timed out for **{} minutes!**\n-# {} Landmines remain~", message.author.id, first_landmine.minutes, landmines.len());
+					let content = format!(
+						":boom: <@{}> stepped on a landmine and has been timed out for **{} minutes!**\n-# {} Landmines remain~",
+						message.author.id,
+						first_landmine.minutes,
+						landmines.len()
+					);
 					if let Err(why) = message.channel_id.say(&ctx.http, content).await {
 						tracing::error!("Error sending message: {why:?}");
 					}
