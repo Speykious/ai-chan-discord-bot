@@ -14,6 +14,8 @@ use tokio::sync::Mutex;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::commands::landmine::Landmine;
+
 mod commands;
 mod reminders;
 mod soliloquy;
@@ -24,7 +26,7 @@ const PIN_MESSAGES_PERMISSION: Permissions = Permissions::from_bits_retain(1 << 
 pub struct AiChan {
 	bot: Arc<RwLock<Option<CurrentUser>>>,
 	reminders: Arc<RwLock<VecDeque<Reminder>>>,
-	channel_landmines: Arc<Mutex<HashMap<ChannelId, VecDeque<u16>>>>,
+	channel_landmines: Arc<Mutex<HashMap<ChannelId, VecDeque<Landmine>>>>,
 }
 
 impl AiChan {
