@@ -85,13 +85,15 @@ pub async fn run(
 	}
 
 	tracing::info!(
-		"Spawned {} landmines, next one is in {} messages",
-		local_landmines.len(),
+		"Spawned {} landmines (max delay = {} messages, max timeout = {} minutes); next one is in {} messages",
+		landmines,
+		messages,
+		minutes,
 		local_landmines[0].delay
 	);
 
 	(landmine_list.lock().await).insert(command.channel_id, local_landmines);
-	let content = format!("There are now {} landmines in this channel. users beware...", landmines);
+	let content = format!("There are now {} landmines in this channel. Users beware... :3c ♡\n-# max delay = **{}** messages, max timeout = **{}** minutes", landmines, messages, minutes);
 
 	let builder = CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().content(content));
 	if let Err(e) = command.create_response(&ctx.http, builder).await {
