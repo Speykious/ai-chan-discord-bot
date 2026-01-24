@@ -9,7 +9,7 @@ use chrono::TimeDelta;
 use rand::random_range;
 use serenity::all::{
 	CacheHttp, ChannelId, CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
-	CreateInteractionResponse, CreateInteractionResponseMessage, EditMember, Message, Timestamp,
+	CreateInteractionResponse, CreateInteractionResponseMessage, EditMember, InteractionContext, Message, Timestamp,
 };
 use tokio::sync::Mutex;
 

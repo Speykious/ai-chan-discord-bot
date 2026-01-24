@@ -13,13 +13,11 @@ pub fn register() -> CreateCommand {
 	CreateCommand::new(NAME)
 		.description(DESCRIPTION)
 		.contexts(vec![InteractionContext::Guild])
-		.add_option(
-			CreateCommandOption::new(
-				CommandOptionType::Number,
-				"minutes",
-				"Duration of time you want to be muted for (5 minutes if unspecified)",
-			),
-		)
+		.add_option(CreateCommandOption::new(
+			CommandOptionType::Number,
+			"minutes",
+			"Duration of time you want to be muted for (5 minutes if unspecified)",
+		))
 }
 
 pub async fn run(ctx: &Context, mut command: CommandInteraction) {
@@ -56,7 +54,10 @@ pub async fn run(ctx: &Context, mut command: CommandInteraction) {
 		let mute_until = EditMember::new().disable_communication_until_datetime(until.into());
 
 		match member.edit(ctx, mute_until).await {
-			Ok(()) => format!("Muted until <t:{0}:f> (<t:{0}:R>). Have a nice rest~", until.timestamp()),
+			Ok(()) => format!(
+				"Muted until <t:{0}:f> (<t:{0}:R>). Have a nice rest~",
+				until.timestamp()
+			),
 			Err(e) => {
 				tracing::error!("Cannot mute member: {e}");
 				"Unfortunately couldn't mute you :(".to_string()

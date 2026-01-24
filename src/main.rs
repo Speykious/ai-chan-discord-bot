@@ -4,7 +4,8 @@ use std::sync::{Arc, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
-	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, Interaction, Ready, Permissions,
+	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler,
+	Interaction, Permissions, Ready,
 };
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
@@ -92,7 +93,7 @@ impl EventHandler for AiChan {
 				}
 				commands::selfmute::NAME => {
 					commands::selfmute::run(&ctx, command).await;
-				},
+				}
 				commands::landmine::NAME => {
 					commands::landmine::run(Arc::clone(&self.channel_landmines), &ctx, &command).await;
 				}
