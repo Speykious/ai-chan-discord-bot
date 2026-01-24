@@ -16,7 +16,6 @@ dependencies = [
  "dotenvy",
  "rand 0.9.2",
  "serenity",
- "timer",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -1598,15 +1597,6 @@ checksum = "78cc610bac2dcee56805c99642447d4c5dbde4d01f752ffea0199aee1f601dc4"
 dependencies = [
  "num-conv",
  "time-core",
-]
-
-[[package]]
-name = "timer"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31d42176308937165701f50638db1c31586f183f1aab416268216577aec7306b"
-dependencies = [
- "chrono",
 ]
 
 [[package]]
