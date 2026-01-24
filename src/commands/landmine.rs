@@ -45,6 +45,7 @@ pub fn register() -> CreateCommand {
 			.min_int_value(2)
 			.max_int_value(10),
 		)
+		.contexts(vec![InteractionContext::Guild])
 		.description(DESCRIPTION)
 }
 
