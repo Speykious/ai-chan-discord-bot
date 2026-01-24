@@ -17,9 +17,16 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::commands::landmine::Landmine;
 
-mod commands;
 mod reminders;
 mod soliloquy;
+
+mod commands {
+	pub mod landmine;
+	pub mod myreminders;
+	pub mod remindme;
+	pub mod selfmute;
+	pub mod threadpin;
+}
 
 const PIN_MESSAGES_PERMISSION: Permissions = Permissions::from_bits_retain(1 << 51);
 
