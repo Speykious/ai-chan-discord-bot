@@ -4,12 +4,7 @@ use std::sync::{Arc, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
-<<<<<<< HEAD
-	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents, Interaction, Ready
-=======
-	Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents,
-	Interaction, Permissions, Ready,
->>>>>>> main
+	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, Interaction, Ready, Permissions,
 };
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
@@ -138,7 +133,7 @@ async fn main() {
 	tracing::info!("Loading Discord bot client...");
 	let ai_chan = AiChan::new(reminders);
 
-	use GatewayIntents as G;
+	use serenity::all::GatewayIntents as G;
 	let mut client = Client::builder(&token, G::GUILD_MESSAGES | G::MESSAGE_CONTENT)
 		.event_handler(ai_chan.clone())
 		.await
