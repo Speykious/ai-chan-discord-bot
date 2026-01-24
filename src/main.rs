@@ -4,7 +4,12 @@ use std::sync::{Arc, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
+<<<<<<< HEAD
 	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents, Interaction, Ready
+=======
+	Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents,
+	Interaction, Permissions, Ready,
+>>>>>>> main
 };
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
@@ -17,6 +22,8 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod commands;
 mod reminders;
 mod soliloquy;
+
+const PIN_MESSAGES_PERMISSION: Permissions = Permissions::from_bits_retain(1 << 51);
 
 #[derive(Clone)]
 pub struct AiChan {
@@ -38,9 +45,14 @@ impl AiChan {
 #[serenity::async_trait]
 impl EventHandler for AiChan {
 	async fn ready(&self, ctx: Context, data: Ready) {
+		let permissions = Permissions::SEND_MESSAGES
+			| Permissions::MANAGE_MESSAGES
+			| Permissions::VIEW_CHANNEL
+			| PIN_MESSAGES_PERMISSION;
 		tracing::info!(
-			"Ready! Invite link: https://discord.com/api/oauth2/authorize?client_id={}&permissions=11264&scope=bot",
-			data.user.id
+			"Ready! Invite link: https://discord.com/api/oauth2/authorize?client_id={}&permissions={}&scope=bot",
+			data.user.id,
+			permissions.bits()
 		);
 		*self.bot.write().unwrap() = Some(data.user);
 
@@ -50,7 +62,7 @@ impl EventHandler for AiChan {
 				commands::remindme::register(),
 				commands::myreminders::register(),
 				commands::selfmute::register(),
-				commands::landmine::register(),
+				commands::threadpin::register(),
 			],
 		)
 		.await
@@ -85,6 +97,9 @@ impl EventHandler for AiChan {
 				},
 				commands::landmine::NAME => {
 					commands::landmine::run(Arc::clone(&self.channel_landmines), &ctx, &command).await;
+				}
+				commands::threadpin::NAME => {
+					commands::threadpin::run(&ctx, command).await;
 				}
 				name => {
 					let builder = CreateInteractionResponse::Message(

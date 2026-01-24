@@ -2,3 +2,4 @@ pub mod landmine;
 pub mod myreminders;
 pub mod remindme;
 pub mod selfmute;
+pub mod threadpin;
