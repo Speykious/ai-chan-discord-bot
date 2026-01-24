@@ -9,7 +9,8 @@ use chrono::TimeDelta;
 use rand::random_range;
 use serenity::all::{
 	CacheHttp, ChannelId, CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
-	CreateInteractionResponse, CreateInteractionResponseMessage, EditMember, InteractionContext, Message, Timestamp,
+	CreateInteractionResponse, CreateInteractionResponseMessage, EditMember, InteractionContext, Message, Permissions,
+	Timestamp,
 };
 use tokio::sync::Mutex;
 
@@ -18,6 +19,7 @@ pub const DESCRIPTION: &str = "Spawn landmines (random user timeouts) in this ch
 
 pub fn register() -> CreateCommand {
 	CreateCommand::new(NAME)
+		.default_member_permissions(Permissions::MANAGE_MESSAGES)
 		.add_option(
 			CreateCommandOption::new(
 				CommandOptionType::Integer,
