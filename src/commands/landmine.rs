@@ -106,6 +106,10 @@ pub async fn handle_message(
 	ctx: &Context,
 	message: &Message,
 ) {
+	if message.author.bot {
+		return;
+	}
+
 	let mut channel_landmines = channel_landmines.lock().await;
 	let Some(landmines) = channel_landmines.get_mut(&message.channel_id) else {
 		return;
