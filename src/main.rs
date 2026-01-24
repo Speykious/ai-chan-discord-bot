@@ -21,6 +21,7 @@ mod reminders;
 mod soliloquy;
 
 mod commands {
+	pub mod clear_landmines;
 	pub mod landmine;
 	pub mod myreminders;
 	pub mod remindme;
@@ -69,6 +70,7 @@ impl EventHandler for AiChan {
 				commands::selfmute::register(),
 				commands::threadpin::register(),
 				commands::landmine::register(),
+				commands::clear_landmines::register(),
 			],
 		)
 		.await
@@ -103,6 +105,9 @@ impl EventHandler for AiChan {
 				}
 				commands::landmine::NAME => {
 					commands::landmine::run(Arc::clone(&self.channel_landmines), &ctx, &command).await;
+				}
+				commands::clear_landmines::NAME => {
+					commands::clear_landmines::run(Arc::clone(&self.channel_landmines), &ctx, &command).await;
 				}
 				commands::threadpin::NAME => {
 					commands::threadpin::run(&ctx, command).await;

@@ -54,9 +54,9 @@ pub fn register() -> CreateCommand {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Landmine {
 	/// Number of messages before the landmine detonates
-	delay: u8,
+	pub delay: u8,
 	/// Max duration of the timeout once the landmine detonates
-	minutes: u8,
+	pub minutes: u8,
 }
 
 pub async fn run(
