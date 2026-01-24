@@ -76,7 +76,7 @@ pub async fn handle_message(channel_landmines: Arc<Mutex<HashMap<ChannelId, VecD
                                 Some(nick) => nick,
                                 None => message.author.name.clone(),
                             };
-                            let content = format!("**OOOPS!! {} stepped on a landmine and has been timed out for 10 minutes!**", name);
+                            let content = format!("**OOOPS!! {} stepped on a landmine and has been timed out for 10 minutes!**. {} Landmines remain", name, landmines.len());
                             if let Err(why) = message.channel_id.say(&ctx.http, content).await {
                                 tracing::error!("Error sending message: {why:?}");
                             }
