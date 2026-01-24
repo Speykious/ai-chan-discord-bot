@@ -58,6 +58,7 @@ impl EventHandler for AiChan {
 				commands::myreminders::register(),
 				commands::selfmute::register(),
 				commands::threadpin::register(),
+				commands::landmine::register(),
 			],
 		)
 		.await
