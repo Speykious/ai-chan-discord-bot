@@ -1,16 +1,16 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::sync::{Arc, RwLock};
 
 use reminders::{load_reminders, Reminder};
 use serenity::all::{
-	Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, GatewayIntents,
-	Interaction, Permissions, Ready,
+	ChannelId, Command, CreateInteractionResponse, CreateInteractionResponseMessage, CurrentUser, EventHandler, Interaction, Ready, Permissions,
 };
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
 use serenity::Client;
 
+use tokio::sync::Mutex;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -24,6 +24,7 @@ const PIN_MESSAGES_PERMISSION: Permissions = Permissions::from_bits_retain(1 << 
 pub struct AiChan {
 	bot: Arc<RwLock<Option<CurrentUser>>>,
 	reminders: Arc<RwLock<VecDeque<Reminder>>>,
+	channel_landmines: Arc<Mutex<HashMap<ChannelId, VecDeque<u16>>>>,
 }
 
 impl AiChan {
@@ -31,6 +32,7 @@ impl AiChan {
 		Self {
 			bot: Arc::new(RwLock::new(None)),
 			reminders: Arc::new(RwLock::new(reminders)),
+			channel_landmines: Arc::new(Mutex::new(HashMap::new())),
 		}
 	}
 }
@@ -56,6 +58,7 @@ impl EventHandler for AiChan {
 				commands::myreminders::register(),
 				commands::selfmute::register(),
 				commands::threadpin::register(),
+				commands::landmine::register(),
 			],
 		)
 		.await
@@ -87,6 +90,9 @@ impl EventHandler for AiChan {
 				}
 				commands::selfmute::NAME => {
 					commands::selfmute::run(&ctx, command).await;
+				},
+				commands::landmine::NAME => {
+					commands::landmine::run(Arc::clone(&self.channel_landmines), &ctx, &command).await;
 				}
 				commands::threadpin::NAME => {
 					commands::threadpin::run(&ctx, command).await;
@@ -105,7 +111,8 @@ impl EventHandler for AiChan {
 	}
 
 	async fn message(&self, ctx: Context, message: Message) {
-		soliloquy::handle_message(self.bot.as_ref(), ctx, message).await;
+		soliloquy::handle_message(self.bot.as_ref(), &ctx, &message).await;
+		commands::landmine::handle_message(Arc::clone(&self.channel_landmines), &ctx, &message).await;
 	}
 }
 
@@ -127,7 +134,7 @@ async fn main() {
 	tracing::info!("Loading Discord bot client...");
 	let ai_chan = AiChan::new(reminders);
 
-	use GatewayIntents as G;
+	use serenity::all::GatewayIntents as G;
 	let mut client = Client::builder(&token, G::GUILD_MESSAGES | G::MESSAGE_CONTENT)
 		.event_handler(ai_chan.clone())
 		.await

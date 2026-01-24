@@ -10,7 +10,7 @@ use tokio::time::sleep;
 
 static SOLILOQUY: ChannelId = ChannelId::new(1137703122408575077);
 
-pub async fn handle_message(bot: &RwLock<Option<CurrentUser>>, ctx: Context, message: Message) {
+pub async fn handle_message(bot: &RwLock<Option<CurrentUser>>, ctx: &Context, message: &Message) {
 	if message.channel_id != SOLILOQUY {
 		// ignore non-soliloquy messages
 		return;
@@ -39,7 +39,7 @@ const OOPS_REPLY: &str = "Please, do not reply to other messages in #soliloquy!"
 const PER_CHANNEL_RULES: &str =
 	"As per the channel rules, this channel is meant as a space where you can monologue, and interactions are thus forbidden.";
 
-async fn oops(oops_msg: &str, ctx: Context, message: Message) {
+async fn oops(oops_msg: &str, ctx: &Context, message: &Message) {
 	if let Err(e) = message.delete(&ctx.http).await {
 		tracing::error!("Could not delete message: {}", e);
 	}
